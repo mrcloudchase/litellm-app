@@ -2,11 +2,11 @@
 
 A comprehensive guide for implementing custom PII detection guardrails in LiteLLM using the dual-detection framework (regex-based + AI-powered).
 
-## 🎯 Overview
+## Overview
 
 This guide demonstrates how to create custom guardrails that integrate with LiteLLM to provide comprehensive PII protection. You'll learn to build both fast regex-based detectors and sophisticated AI-powered guardrails using Microsoft Presidio.
 
-## 🏗️ Architecture Flow Diagram
+## Architecture Flow Diagram
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -77,7 +77,7 @@ This guide demonstrates how to create custom guardrails that integrate with Lite
 └─────────────────────────────────────────────────────────────────────────────────┘
 ```
 
-## 📚 Implementation Guide
+## Implementation Guide
 
 ### Step 1: Understanding the Guardrail Framework
 
@@ -373,7 +373,7 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 CMD ["--port", "4000", "--config", "/app/litellm-config.yaml"]
 ```
 
-## 🧪 Testing Your Implementation
+## Testing Your Implementation
 
 ### Create Test Collection (`test_my_guardrails.http`)
 ```http
@@ -418,7 +418,7 @@ Content-Type: application/json
 }
 ```
 
-## 🔧 Advanced Implementation Patterns
+## Advanced Implementation Patterns
 
 ### Pattern 1: Configurable Detection Thresholds
 ```python
@@ -477,7 +477,7 @@ def should_bypass_detection(self, user_api_key_dict: UserAPIKeyAuth) -> bool:
     return False
 ```
 
-## 🚀 Deployment Integration
+## Deployment Integration
 
 ### Local Development
 ```bash
@@ -511,7 +511,7 @@ services:
       - LITELLM_MODE=PRODUCTION
 ```
 
-## 🎯 Best Practices
+## Best Practices
 
 ### 1. **Performance Optimization**
 - Use **regex for fast detection** of simple patterns
@@ -559,7 +559,7 @@ for case in test_cases:
     assert result == case["should_block"], f"Failed: {case['reason']}"
 ```
 
-## 📊 Implementation Checklist
+## Implementation Checklist
 
 ### Core Requirements:
 - [ ] **Detection Engine**: Shared logic class with PII patterns/models
@@ -577,7 +577,7 @@ for case in test_cases:
 - [ ] **Performance**: Optimized for production workloads
 - [ ] **Monitoring**: Integration with observability systems
 
-## 🎯 Example: Complete Custom Credit Card Guardrail
+## Example: Complete Custom Credit Card Guardrail
 
 Here's a complete example implementing credit card detection:
 
@@ -631,7 +631,7 @@ class CreditCardGuardrail(CustomGuardrail):
         return None
 ```
 
-## 🔗 Integration with Your Framework
+## Integration with Your Framework
 
 To integrate with the existing dual-detection system:
 
@@ -641,7 +641,7 @@ To integrate with the existing dual-detection system:
 4. **Create comprehensive tests** following the `test_*.http` pattern
 5. **Document in README.md** following the established format
 
-## 🎯 Summary
+## Summary
 
 This implementation guide provides:
 - **Complete code examples** for both regex and AI-based detection

@@ -247,6 +247,7 @@ litellm-app/
 
 Changes to core files (`Dockerfile`, `litellm-config.yaml`, `pii_*.py`) will trigger automatic container builds.
 
----
+
+For a full walkthrough, please see the [IMPLEMENTATION_GUIDE.md](IMPLEMENTATION_GUIDE.md) file.
 
 **Enterprise-grade PII protection for AI applications. Built for scale, security, and reliability.**

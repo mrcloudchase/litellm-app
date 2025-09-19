@@ -9,6 +9,11 @@ model_list:
     litellm_params:
       model: openai/gpt-4o-mini
       api_key: os.environ/OPENAI_API_KEY
+  
+  - model_name: llama2-70b
+    litellm_params:
+      model: bedrock/meta.llama2-70b-chat-v1
+      aws_region_name: us-east-1
 
 # General Settings
 general_settings:

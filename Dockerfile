@@ -29,6 +29,6 @@ EXPOSE 4000
 # Use exec form for better signal handling
 CMD ["--port", "4000", "--config", "/app/litellm-config.yaml"]
 
-# Add health check
+# Add health check - 401 response means service is healthy and just needs authentication
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:4000/health || exit 1
+    CMD curl -s -o /dev/null -w "%{http_code}" http://localhost:4000/health | grep -E "^(200|401)$" > /dev/null || exit 1

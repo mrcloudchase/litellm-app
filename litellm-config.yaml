@@ -3,7 +3,7 @@ model_list:
   - model_name: llama3.2-3b
     litellm_params:
       model: ollama/llama3.2:3b
-      api_base: http://ollama:11434
+      api_base: http://localhost:11434
 
 # General Settings
 general_settings:

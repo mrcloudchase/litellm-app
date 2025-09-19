@@ -8,74 +8,74 @@ This guide demonstrates how to create custom guardrails that integrate with Lite
 
 ## Architecture Flow Diagram
 
+```mermaid
+flowchart TD
+    A[User Input<br/>My email is john@company.com] --> B{Authentication}
+    B -->|Valid API Key| C[Pre-Call Guardrails]
+    B -->|Invalid| Z[401 Unauthorized]
+    
+    C --> D[Regex Detection]
+    C --> E[Presidio AI Detection]
+    
+    D --> F{Email Pattern<br/>Found?}
+    E --> G{EMAIL_ADDRESS<br/>Confidence ≥ 0.7?}
+    
+    F -->|Yes| H[Block Request]
+    G -->|Yes| H
+    F -->|No| I{All Guardrails<br/>Passed?}
+    G -->|No| I
+    
+    H --> J[Error Response:<br/>PII detected: email, EMAIL_ADDRESS]
+    
+    I -->|Yes| K[Forward to AI Model]
+    K --> L[AI Model Response<br/>Generated content]
+    
+    L --> M[Post-Call Guardrails]
+    M --> N[Regex Scan Response]
+    M --> O[Presidio Scan Response]
+    
+    N --> P{PII in<br/>Response?}
+    O --> Q{PII in<br/>Response?}
+    
+    P -->|Yes| R[Block Response]
+    Q -->|Yes| R
+    P -->|No| S{All Post-Call<br/>Checks Passed?}
+    Q -->|No| S
+    
+    R --> T[Error Response:<br/>Response contains PII]
+    S -->|Yes| U[Return Clean Response to User]
+    
+    style A fill:#e1f5fe
+    style H fill:#ffebee
+    style J fill:#ffebee
+    style R fill:#ffebee
+    style T fill:#ffebee
+    style U fill:#e8f5e8
+    style K fill:#fff3e0
+    style L fill:#fff3e0
 ```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              LiteLLM Request Flow                               │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            1. User Input Received                              │
-│                          "My email is john@company.com"                        │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          2. PRE-CALL GUARDRAILS                                │
-│                                                                                 │
-│  ┌─────────────────────────┐         ┌─────────────────────────┐               │
-│  │    Regex Guardrail      │         │   Presidio Guardrail    │               │
-│  │                         │         │                         │               │
-│  │  • Fast pattern match   │         │  • ML-based analysis    │               │
-│  │  • Email regex check    │    +    │  • Context awareness    │               │
-│  │  • Result: PII found    │         │  • Confidence scoring   │               │
-│  │  • Action: BLOCK        │         │  • Result: EMAIL_ADDRESS│               │
-│  └─────────────────────────┘         └─────────────────────────┘               │
-│                                        │                                        │
-│                              ┌─────────▼─────────┐                             │
-│                              │   PII DETECTED    │                             │
-│                              │   REQUEST BLOCKED │                             │
-│                              └───────────────────┘                             │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                     3. Error Response to User                                  │
-│      "Pre-call guardrail blocked PII detected: email, EMAIL_ADDRESS"          │
-└─────────────────────────────────────────────────────────────────────────────────┘
 
-                              ═══ CLEAN REQUEST FLOW ═══
+### PII Detection Flow Explanation
 
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                    1. Clean User Input: "Hello, how are you?"                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          2. PRE-CALL GUARDRAILS                                │
-│                            ✅ No PII Detected                                   │
-│                            ✅ Request Allowed                                   │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          3. AI Model Processing                                │
-│                    "I'm doing well, thank you for asking!"                     │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                         4. POST-CALL GUARDRAILS                                │
-│                            ✅ No PII Detected                                   │
-│                            ✅ Response Allowed                                  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                      5. Clean Response to User                                 │
-│                    "I'm doing well, thank you for asking!"                     │
-└─────────────────────────────────────────────────────────────────────────────────┘
-```
+**Pre-Call Protection:**
+1. **User input** is received and authenticated
+2. **Dual detection** runs in parallel:
+   - **Regex engine** scans for known patterns (email, SSN, phone, credit card)
+   - **Presidio AI** performs ML-based analysis with confidence scoring
+3. **Any PII detection** blocks the request before reaching the AI model
+4. **Error response** returned with detected PII types
+
+**Post-Call Protection:**
+1. **AI model response** is intercepted before reaching the user
+2. **Dual scanning** analyzes the response content
+3. **Any PII detection** blocks the response
+4. **Clean responses** are allowed through to the user
+
+**Key Benefits:**
+- **Defense in depth** with dual detection systems
+- **Zero PII leakage** with pre and post-call protection
+- **Context awareness** via Presidio's ML analysis
+- **Fast performance** with regex for common patterns
 
 ## Implementation Guide
 

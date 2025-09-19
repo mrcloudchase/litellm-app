@@ -100,3 +100,31 @@ jobs:
         echo "  • Multi-platform support (amd64/arm64)"
         echo "  • Production-ready single container"
         echo "  • Health checks included"
+
+    - name: Trigger Infrastructure Deployment
+      if: success()
+      env:
+        GH_TOKEN: ${{ secrets.INFRA_DEPLOY_TOKEN }}
+      run: |
+        # Build the image URI that was just pushed
+        IMAGE_URI="${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
+        
+        echo "Triggering infrastructure deployment with new image..."
+        echo "Image: $IMAGE_URI"
+        echo "Commit: ${{ github.sha }}"
+        
+        # Trigger deployment in infrastructure repo
+        gh api repos/mrcloudchase/litellm-infra/dispatches \
+          --method POST \
+          --field event_type='deploy_new_image' \
+          --field client_payload="{
+            \"image_uri\":\"$IMAGE_URI\",
+            \"image_tag\":\"${{ github.sha }}\",
+            \"environment\":\"dev\",
+            \"source_commit\":\"${{ github.sha }}\",
+            \"source_repo\":\"${{ github.repository }}\"
+          }"
+        
+        echo "✅ Infrastructure deployment triggered successfully!"
+        echo "📋 Monitor progress at: https://github.com/mrcloudchase/litellm-infra/actions"
+        echo "🔗 Direct link: https://github.com/mrcloudchase/litellm-infra/actions/workflows/deploy-dev.yml"

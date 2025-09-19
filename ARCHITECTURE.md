@@ -2,158 +2,135 @@
 
 Detailed architecture documentation for the dual PII detection system implemented in this repository.
 
-## 🏗️ High-Level System Architecture
+## High-Level System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              External Client                                   │
-│                         (Web UI, API Client, etc.)                             │
-└─────────────────────────────┬───────────────────────────────────────────────────┘
-                              │ HTTP Request
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                          AWS Application Load Balancer                         │
-│                         (litellm-dev-ci-alb-26395982)                          │
-└─────────────────────────────┬───────────────────────────────────────────────────┘
-                              │ Route to ECS
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                              AWS ECS Service                                   │
-│                           (Auto-scaling 1-3 tasks)                             │
-│                                                                                 │
-│  ┌─────────────────────────────────────────────────────────────────────────┐  │
-│  │                    LiteLLM Container Instance                           │  │
-│  │                                                                         │  │
-│  │  ┌─────────────────────────────────────────────────────────────────┐  │  │
-│  │  │                      LiteLLM Proxy Core                         │  │  │
-│  │  │                        (Port 4000)                              │  │  │
-│  │  └─────────────────────────┬───────────────────────────────────────┘  │  │
-│  │                            │                                           │  │
-│  │  ┌─────────────────────────▼───────────────────────────────────────┐  │  │
-│  │  │                   Guardrail Framework                           │  │  │
-│  │  │                                                                 │  │  │
-│  │  │  ┌─────────────────┐       ┌─────────────────┐                 │  │  │
-│  │  │  │  Regex Engine   │       │ Presidio Engine │                 │  │  │
-│  │  │  │                 │       │                 │                 │  │  │
-│  │  │  │ • Email regex   │       │ • 50+ entities  │                 │  │  │
-│  │  │  │ • SSN patterns  │       │ • ML analysis   │                 │  │  │
-│  │  │  │ • Phone regex   │       │ • Confidence    │                 │  │  │
-│  │  │  │ • Credit cards  │       │ • Context aware │                 │  │  │
-│  │  │  └─────────────────┘       └─────────────────┘                 │  │  │
-│  │  │                                                                 │  │  │
-│  │  │  ┌─────────────────┐       ┌─────────────────┐                 │  │  │
-│  │  │  │   Pre-Call      │       │   Post-Call     │                 │  │  │
-│  │  │  │   Guardrails    │       │   Guardrails    │                 │  │  │
-│  │  │  │                 │       │                 │                 │  │  │
-│  │  │  │ • Block input   │       │ • Block output  │                 │  │  │
-│  │  │  │ • Fast regex    │       │ • AI analysis   │                 │  │  │
-│  │  │  │ • Pattern match │       │ • Response scan │                 │  │  │
-│  │  │  └─────────────────┘       └─────────────────┘                 │  │  │
-│  │  └─────────────────────────────────────────────────────────────────┘  │  │
-│  └─────────────────────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────────────────────┘
-                              │ External AI Model Calls
-                              ▼
-┌─────────────────────────────────────────────────────────────────────────────────┐
-│                            External AI Models                                  │
-│                      (OpenAI, Anthropic, Local Ollama, etc.)                   │
-└─────────────────────────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph "External Layer"
+        Client[External Client<br/>Web UI, API Client, etc.]
+    end
+    
+    subgraph "AWS Infrastructure"
+        ALB[Application Load Balancer<br/>litellm-dev-ci-alb-26395982]
+        
+        subgraph "ECS Service"
+            subgraph "Container Instance"
+                subgraph "LiteLLM Proxy"
+                    Core[LiteLLM Core<br/>Port 4000]
+                    
+                    subgraph "Guardrail Framework"
+                        subgraph "Detection Engines"
+                            Regex[Regex Engine<br/>• Email patterns<br/>• SSN patterns<br/>• Phone patterns<br/>• Credit card patterns]
+                            Presidio[Presidio AI Engine<br/>• 50+ entity types<br/>• ML analysis<br/>• Confidence scoring<br/>• Context awareness]
+                        end
+                        
+                        subgraph "Guardrail Types"
+                            PreCall[Pre-Call Guardrails<br/>• Block input PII<br/>• Fast regex check<br/>• AI analysis]
+                            PostCall[Post-Call Guardrails<br/>• Block output PII<br/>• Response scanning<br/>• Content filtering]
+                        end
+                    end
+                end
+            end
+        end
+        
+        RDS[(RDS PostgreSQL<br/>Database)]
+    end
+    
+    subgraph "External AI Models"
+        OpenAI[OpenAI Models]
+        Anthropic[Anthropic Models]
+        Ollama[Local Ollama]
+        Other[Other Providers]
+    end
+    
+    Client -->|HTTP Request| ALB
+    ALB -->|Route to ECS| Core
+    Core --> Regex
+    Core --> Presidio
+    Regex --> PreCall
+    Presidio --> PreCall
+    PreCall --> PostCall
+    PostCall --> Core
+    Core -->|External API Calls| OpenAI
+    Core -->|External API Calls| Anthropic
+    Core -->|Local Development| Ollama
+    Core -->|External API Calls| Other
+    Core -->|Persistence| RDS
+    
+    style Client fill:#e1f5fe
+    style ALB fill:#fff3e0
+    style Core fill:#e8f5e8
+    style Regex fill:#f3e5f5
+    style Presidio fill:#e8eaf6
+    style PreCall fill:#ffebee
+    style PostCall fill:#ffebee
+    style RDS fill:#e0f2f1
 ```
 
-## 🔄 Request Processing Flow
+## Request Processing Flow
 
 ### Pre-Call Guardrail Flow
-```
-User Request
-     │
-     ▼
-┌─────────────────────────────────────────┐
-│         Authentication Check            │
-│    (Master Key Validation)              │
-└─────────────┬───────────────────────────┘
-              │ ✅ Authenticated
-              ▼
-┌─────────────────────────────────────────┐
-│       Extract User Messages             │
-│   (Parse request for user content)      │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────┐
-│         Regex Detection                 │
-│                                         │
-│  • Email pattern matching              │
-│  • SSN format detection                │
-│  • Phone number patterns               │
-│  • Credit card validation              │
-│                                         │
-│  Result: PII Found? ───────────────────┐│
-└─────────────┬───────────────────────────┘│
-              │ ✅ No PII                  ││
-              ▼                           ▼│
-┌─────────────────────────────────────────┐│
-│        Presidio AI Analysis             ││
-│                                         ││ 
-│  • Load ML models (spaCy)               ││
-│  • Context-aware analysis               ││
-│  • 50+ entity type detection            ││
-│  • Confidence scoring (≥0.7)            ││
-│                                         ││
-│  Result: PII Found? ───────────────────┐││
-└─────────────┬───────────────────────────┘││
-              │ ✅ No PII                  │▼
-              ▼                           ▼
-┌─────────────────────────────────────────┐ ┌─────────────────────────────────────────┐
-│         Forward to AI Model             │ │            Block Request                │
-│      (OpenAI, Anthropic, etc.)          │ │                                         │
-└─────────────────────────────────────────┘ │  • Log PII detection event             │
-                                            │  • Return error to user                 │
-                                            │  • Include detected PII types           │
-                                            └─────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[User Request] --> B[Authentication Check<br/>Master Key Validation]
+    B -->|Authenticated| C[Extract User Messages<br/>Parse request content]
+    B -->|Invalid| Z[401 Unauthorized]
+    
+    C --> D[Regex Detection]
+    C --> E[Presidio AI Analysis]
+    
+    D --> F[Email Pattern Matching<br/>SSN Format Detection<br/>Phone Number Patterns<br/>Credit Card Validation]
+    E --> G[Load ML Models spaCy<br/>Context-aware Analysis<br/>50+ Entity Detection<br/>Confidence Scoring ≥0.7]
+    
+    F --> H{PII Found?}
+    G --> I{PII Found?}
+    
+    H -->|Yes| J[Block Request<br/>Log Detection Event<br/>Return Error Response]
+    I -->|Yes| J
+    H -->|No| K{All Guardrails Passed?}
+    I -->|No| K
+    
+    K -->|Yes| L[Forward to AI Model<br/>OpenAI, Anthropic, etc.]
+    
+    style A fill:#e1f5fe
+    style B fill:#fff3e0
+    style C fill:#e8f5e8
+    style D fill:#f3e5f5
+    style E fill:#e8eaf6
+    style J fill:#ffebee
+    style L fill:#e8f5e8
 ```
 
 ### Post-Call Guardrail Flow
-```
-AI Model Response
-     │
-     ▼
-┌─────────────────────────────────────────┐
-│      Extract Response Content           │
-│   (Parse AI model response)             │
-└─────────────┬───────────────────────────┘
-              │
-              ▼
-┌─────────────────────────────────────────┐
-│         Regex Detection                 │
-│                                         │
-│  • Scan response for PII patterns       │
-│  • Check for leaked information         │
-│                                         │
-│  Result: PII Found? ───────────────────┐│
-└─────────────┬───────────────────────────┘│
-              │ ✅ No PII                  ││
-              ▼                           ▼│
-┌─────────────────────────────────────────┐│
-│        Presidio AI Analysis             ││
-│                                         ││
-│  • ML-based response analysis           ││
-│  • Context understanding                ││
-│  • Entity confidence scoring            ││
-│                                         ││
-│  Result: PII Found? ───────────────────┐││
-└─────────────┬───────────────────────────┘││
-              │ ✅ Clean Response           │▼
-              ▼                           ▼
-┌─────────────────────────────────────────┐ ┌─────────────────────────────────────────┐
-│        Return Response to User          │ │           Block Response                │
-│                                         │ │                                         │
-└─────────────────────────────────────────┘ │  • Log PII detection event             │
-                                            │  • Return error to user                 │
-                                            │  • Prevent PII leakage                  │
-                                            └─────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    A[AI Model Response] --> B[Extract Response Content<br/>Parse AI model output]
+    
+    B --> C[Regex Detection]
+    B --> D[Presidio AI Analysis]
+    
+    C --> E[Scan Response for PII Patterns<br/>Check for Leaked Information]
+    D --> F[ML-based Response Analysis<br/>Context Understanding<br/>Entity Confidence Scoring]
+    
+    E --> G{PII Found in Response?}
+    F --> H{PII Found in Response?}
+    
+    G -->|Yes| I[Block Response<br/>Log PII Detection<br/>Return Error Message]
+    H -->|Yes| I
+    G -->|No| J{All Post-Call Checks Passed?}
+    H -->|No| J
+    
+    J -->|Yes| K[Return Clean Response to User]
+    
+    style A fill:#fff3e0
+    style B fill:#e8f5e8
+    style C fill:#f3e5f5
+    style D fill:#e8eaf6
+    style I fill:#ffebee
+    style K fill:#e8f5e8
 ```
 
-## 🏗️ Code Architecture
+## Code Architecture
 
 ### Class Hierarchy
 ```
@@ -195,7 +172,7 @@ litellm-app/
     └── test_regex.py                   # Automated Python tests
 ```
 
-## 🔧 Configuration Architecture
+## Configuration Architecture
 
 ### Guardrail Registration
 ```yaml
@@ -229,7 +206,7 @@ curl -X POST /v1/chat/completions \
   }'
 ```
 
-## 🚀 Deployment Architecture
+## Deployment Architecture
 
 ### Development Environment
 ```
@@ -269,7 +246,7 @@ litellm-infra repo:
 └── Verify deployment health
 ```
 
-## 🔒 Security Architecture
+## Security Architecture
 
 ### Container Security
 ```
@@ -293,7 +270,7 @@ Defense in Depth:
 └── Fail-Safe Blocking (default deny)
 ```
 
-## 📊 Performance Characteristics
+## Performance Characteristics
 
 ### Regex Guardrails
 - **Latency**: Sub-millisecond detection

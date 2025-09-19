@@ -289,5 +289,3 @@ Defense in Depth:
 - **Configurable**: Enable/disable individual guardrails
 - **Scalable**: ECS auto-scaling based on demand
 - **Monitored**: Health checks and error tracking
-
-This architecture provides enterprise-grade PII protection with the flexibility to optimize for either performance or security based on specific requirements.

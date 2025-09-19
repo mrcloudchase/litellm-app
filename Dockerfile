@@ -5,7 +5,7 @@ FROM ghcr.io/berriai/litellm:main-stable
 WORKDIR /app
 
 # Install Microsoft Presidio analyzer for comprehensive PII detection
-RUN pip install --no-cache-dir presidio-analyzer
+RUN pip install --no-cache-dir --quiet presidio-analyzer
 
 # Copy files
 COPY litellm-config.yaml /app/litellm-config.yaml

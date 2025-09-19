@@ -49,62 +49,13 @@ jobs:
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
 
-    - name: Create image manifest
-      run: |
-        cat > image-manifest.json << EOF
-        {
-          "build_info": {
-            "commit": "${{ github.sha }}",
-            "build_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "repository": "${{ github.repository }}",
-            "ref": "${{ github.ref }}"
-          },
-          "images": {
-            "litellm-guardrails": {
-              "repository": "${{ secrets.ECR_REGISTRY }}/litellm-guardrails",
-              "tags": ["latest", "${{ github.sha }}"],
-              "description": "LiteLLM proxy with embedded regex and Presidio PII detection guardrails",
-              "features": [
-                "Regex-based PII detection (email, SSN, phone, credit card)",
-                "Microsoft Presidio ML-based detection (50+ entity types)",
-                "Pre-call and post-call guardrails",
-                "Configurable confidence thresholds",
-                "Production-ready single container deployment"
-              ]
-            }
-          }
-        }
-        EOF
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: build-manifest-${{ github.sha }}
-        path: |
-          image-manifest.json
-        retention-days: 90
 
     - name: Output build information
       run: |
-        echo "Successfully built and pushed LiteLLM image to ECR:"
-        echo ""
-        echo "Image available for infrastructure deployment:"
-        echo "  - LiteLLM with PII Guardrails: ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
-        echo ""
-        echo "Embedded PII Detection Features:"
-        echo "  - Regex-based detection (email, SSN, phone, credit card)"
-        echo "  - Microsoft Presidio ML-based detection (50+ entity types)"
-        echo "  - Pre-call and post-call guardrails"
-        echo "  - Configurable confidence thresholds"
-        echo ""
-        echo "Available tags:"
-        echo "  - latest (for development)"
-        echo "  - ${{ github.sha }} (for production infrastructure)"
-        echo ""
-        echo "Ready for infrastructure deployment!"
-        echo "  - Multi-platform support (amd64/arm64)"
-        echo "  - Production-ready single container"
-        echo "  - Health checks included"
+        echo "Container build completed successfully"
+        echo "Image: ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
+        echo "Tags: latest, ${{ github.sha }}"
+        echo "Features: Regex + Presidio PII detection, Multi-platform (amd64/arm64)"
 
     - name: Trigger Infrastructure Deployment
       if: success()
@@ -117,7 +68,7 @@ jobs:
         echo "Commit: ${{ github.sha }}"
         
         # Trigger deployment in infrastructure repo using curl
-        curl -X POST \
+        HTTP_STATUS=$(curl -s -w "%{http_code}" -X POST \
           -H "Accept: application/vnd.github.v3+json" \
           -H "Authorization: Bearer ${{ secrets.INFRA_DEPLOY_TOKEN }}" \
           https://api.github.com/repos/mrcloudchase/litellm-infra/dispatches \
@@ -130,8 +81,12 @@ jobs:
               \"source_commit\":\"${{ github.sha }}\",
               \"source_repo\":\"${{ github.repository }}\"
             }
-          }"
+          }" -o /dev/null)
         
-        echo "Infrastructure deployment triggered successfully!"
-        echo "Monitor progress at: https://github.com/mrcloudchase/litellm-infra/actions"
-        echo "Direct link: https://github.com/mrcloudchase/litellm-infra/actions/workflows/deploy-dev.yml"
+        if [ "$HTTP_STATUS" -eq 204 ]; then
+          echo "Infrastructure deployment triggered successfully (HTTP $HTTP_STATUS)"
+          echo "Monitor: https://github.com/mrcloudchase/litellm-infra/actions"
+        else
+          echo "Repository dispatch failed with HTTP status: $HTTP_STATUS"
+          exit 1
+        fi

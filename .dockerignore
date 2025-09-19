@@ -1,13 +1,31 @@
-# Development and documentation files
+# Version control and git files
 .git
 .gitignore
+.github/
+
+# Development and documentation files
 *.md
+README.md
 docs/
 plan.md
 assessment-plan.md
 DEMO_SCRIPT.md
 DOCKER_STRATEGY.md
 IMPLEMENTATION_NOTES.md
+
+# Local development files
+docker-compose.yml
+Makefile
+.dockerignore
+
+# Test files and HTTP test collections
+test_*.http
+test_*.py
+test_presidio.http
+test_regex.http
+test_regex.py
+tests/
+scripts/test_*
 
 # IDE and editor files
 .vscode/
@@ -33,23 +51,34 @@ secrets/
 *.pem
 *.crt
 
-# Test files
-tests/
-scripts/test_*
-
 # Build artifacts
 dist/
 build/
 *.tar.gz
 
-# Python cache
-__pycache__
+# Python cache and artifacts
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .pytest_cache/
 .coverage
+*.egg-info/
+.mypy_cache/
+.tox/
 
 # Docker volumes and data
 postgres_data/
 ollama_data/
+
+# Node.js (if any)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backup and swap files
+*.backup
+*.swp
+*.swo
+*~

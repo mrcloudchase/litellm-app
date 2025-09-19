@@ -18,14 +18,8 @@ docker-compose.yml
 Makefile
 .dockerignore
 
-# Test files and HTTP test collections
-test_*.http
-test_*.py
-test_presidio.http
-test_regex.http
-test_regex.py
+# Test files and collections
 tests/
-scripts/test_*
 
 # IDE and editor files
 .vscode/

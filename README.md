@@ -2,17 +2,17 @@
 
 A production-ready LiteLLM deployment featuring **dual PII detection systems** (regex-based + AI-powered) with automated CI/CD pipeline for containerized deployment to AWS ECR.
 
-## 🎯 What This Repository Does
+## What This Repository Does
 
 This repository provides a **security-enhanced LiteLLM proxy** that automatically detects and blocks Personally Identifiable Information (PII) in both user inputs and AI model responses, packaged as production-ready container images.
 
 ### Key Capabilities
-- **🛡️ Dual PII Protection**: Fast regex + comprehensive AI-based detection
-- **🔄 Automated CI/CD**: GitHub Actions → ECR → Infrastructure deployment
-- **🏗️ Production Ready**: Multi-platform containers with security hardening
-- **⚡ Local Development**: Complete development environment with testing tools
+- **Dual PII Protection**: Fast regex + comprehensive AI-based detection
+- **Automated CI/CD**: GitHub Actions → ECR → Infrastructure deployment
+- **Production Ready**: Multi-platform containers with security hardening
+- **Local Development**: Complete development environment with testing tools
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -32,7 +32,7 @@ This repository provides a **security-enhanced LiteLLM proxy** that automaticall
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-## 🛡️ PII Detection Systems
+## PII Detection Systems
 
 ### 1. **Regex-Based Guardrails** (Fast & Reliable)
 - **Email addresses**: `user@domain.com`, `user+tag@domain.org`
@@ -55,7 +55,7 @@ This repository provides a **security-enhanced LiteLLM proxy** that automaticall
 - **Configurable**: Enable/disable individual guardrails as needed
 - **Layered Security**: Multiple detection systems provide comprehensive coverage
 
-## 🚀 CI/CD & Deployment Pipeline
+## CI/CD & Deployment Pipeline
 
 ### Automated Container Builds
 ```yaml
@@ -83,14 +83,14 @@ Automatically triggers infrastructure deployment in `litellm-infra` repository w
 - Commit SHA for traceability
 - Environment targeting (dev/staging/prod)
 
-## 📦 Published Container Images
+## Published Container Images
 
 | Repository | Image URI | Description |
 |------------|-----------|-------------|
 | **litellm-guardrails** | `{ECR_REGISTRY}/litellm-guardrails:latest` | Latest development build |
 | **litellm-guardrails** | `{ECR_REGISTRY}/litellm-guardrails:{sha}` | Production-ready tagged builds |
 
-## 🔧 Local Development
+## Local Development
 
 ### Quick Start
 ```bash
@@ -124,7 +124,7 @@ make test-guardrails
 # tests/test_presidio.http - Presidio guardrail tests
 ```
 
-## 🔧 Configuration
+## Configuration
 
 ### Guardrail Configuration (`litellm-config.yaml`)
 ```yaml
@@ -151,11 +151,10 @@ DATABASE_URL=postgresql://...         # Optional: Persistence
 LITELLM_MODE=PRODUCTION              # Runtime mode
 ```
 
-## 🏷️ Production Usage
+## Production Usage
 
 ### Docker Compose
 ```yaml
-version: '3.8'
 services:
   litellm:
     image: {ECR_REGISTRY}/litellm-guardrails:latest
@@ -192,7 +191,7 @@ spec:
               key: master-key
 ```
 
-## 🔒 Security Features
+## Security Features
 
 ### Container Security
 - **Minimal Attack Surface**: Only essential runtime files included
@@ -206,7 +205,7 @@ spec:
 - **Audit Trail**: Comprehensive logging of PII detection events
 - **Performance Optimized**: Fast regex for high-throughput, AI for accuracy
 
-## 📁 Repository Structure
+## Repository Structure
 
 ```
 litellm-app/
@@ -232,14 +231,14 @@ litellm-app/
     └── build-and-push-ecr.yml  # Container build pipeline
 ```
 
-## 🚀 Getting Started
+## Getting Started
 
 1. **For Local Development**: Use `make build && make start`
 2. **For Production Deployment**: Pull from ECR and deploy with your infrastructure
 3. **For Testing**: Use the HTTP test collections in `tests/`
 4. **For CI/CD**: Configure GitHub secrets and let automation handle builds
 
-## 🤝 Contributing
+## Contributing
 
 1. Fork the repository
 2. Make your changes (ensure they follow the project structure)
@@ -250,4 +249,4 @@ Changes to core files (`Dockerfile`, `litellm-config.yaml`, `pii_*.py`) will tri
 
 ---
 
-**Enterprise-grade PII protection for AI applications. Built for scale, security, and reliability.** 🛡️
+**Enterprise-grade PII protection for AI applications. Built for scale, security, and reliability.**

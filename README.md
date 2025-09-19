@@ -1,6 +1,6 @@
 # LiteLLM App - Container Image Builder
 
-A production-ready LiteLLM deployment with custom PII detection guardrails, designed for **container image building** and **automated ECR publishing**.
+A production-ready LiteLLM deployment with custom regex-based PII detection guardrails, designed for **container image building** and **automated ECR publishing**.
 
 ## 🎯 Repository Purpose
 
@@ -15,22 +15,16 @@ This repository builds and publishes security-hardened container images to AWS E
 
 ```
 LiteLLM App Stack:
-├── LiteLLM Proxy (Port 4000)     # Main service with embedded guardrails
-├── PostgreSQL (Port 5432)        # API key management & logging  
-├── Ollama (Port 11434)           # Local LLM runtime with auto model pulling
-├── Presidio Analyzer (Port 3000) # ML-based PII detection
-└── Presidio Anonymizer (Port 3001) # PII masking/redaction
+└── LiteLLM Proxy (Port 4000)     # Main service with embedded regex-based PII guardrails
 ```
 
 ## 📦 Published Container Images
 
-This repository automatically builds and publishes these images to ECR:
+This repository automatically builds and publishes this image to ECR:
 
 | Service | ECR Repository | Description |
 |---------|---------------|-------------|
-| **LiteLLM** | `chasedecr.dkr.ecr.us-east-1.amazonaws.com/litellm-guardrails` | LiteLLM proxy with custom PII detection guardrails |
-| **PostgreSQL** | `chasedecr.dkr.ecr.us-east-1.amazonaws.com/postgres-litellm` | PostgreSQL with security configurations |
-| **Ollama** | `chasedecr.dkr.ecr.us-east-1.amazonaws.com/ollama-autopull` | Ollama with automatic model downloading |
+| **LiteLLM** | `chasedecr.dkr.ecr.us-east-1.amazonaws.com/litellm-guardrails` | LiteLLM proxy with custom regex-based PII detection guardrails |
 
 ## 🚀 CI/CD Pipeline
 
@@ -64,10 +58,6 @@ curl http://localhost:4000/health
 
 ### Available Services
 - **LiteLLM API**: http://localhost:4000
-- **PostgreSQL**: localhost:5432
-- **Ollama**: http://localhost:11434
-- **Presidio Analyzer**: http://localhost:3000
-- **Presidio Anonymizer**: http://localhost:3001
 
 ## 🛡️ Security Features
 
@@ -87,11 +77,8 @@ All published images include enterprise security hardening:
 - **Social Security Numbers**: `123-45-6789`, `123 45 6789`, `123456789`
 - **Phone numbers**: `(555) 123-4567`, `555-123-4567`, `+1 555 123 4567`
 - **Credit card numbers**: Visa, MasterCard, Amex, Discover formats
-
-### Microsoft Presidio Integration
-- **50+ PII types**: Names, locations, organizations, IP addresses
-- **Context-aware detection**: ML-based analysis with NLP
-- **Multiple languages**: Configurable language support
+- **Pre-call and post-call detection**: Blocks PII in both user input and model responses
+- **Fast pattern-based detection**: Low latency regex-based matching
 
 ## 🏷️ Image Usage
 
@@ -105,25 +92,6 @@ services:
       - "4000:4000"
     environment:
       - LITELLM_MASTER_KEY=your-master-key
-      - DATABASE_URL=postgresql://user:pass@postgres:5432/db
-    
-  postgres:
-    image: chasedecr.dkr.ecr.us-east-1.amazonaws.com/postgres-litellm:latest
-    environment:
-      - POSTGRES_PASSWORD=your-password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      
-  ollama:
-    image: chasedecr.dkr.ecr.us-east-1.amazonaws.com/ollama-autopull:latest
-    ports:
-      - "11434:11434"
-    volumes:
-      - ollama_data:/root/.ollama
-
-volumes:
-  postgres_data:
-  ollama_data:
 ```
 
 ### In Kubernetes

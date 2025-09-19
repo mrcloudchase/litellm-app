@@ -7,7 +7,6 @@ on:
 
 env:
   AWS_REGION: us-east-1
-  ECR_REGISTRY_ALIAS: chasedecr
 
 jobs:
   build-and-push:
@@ -32,41 +31,15 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and push LiteLLM image
+    - name: Build and push LiteLLM image with embedded guardrails
       uses: docker/build-push-action@v5
       with:
-        context: ./services/litellm
-        file: ./services/litellm/Dockerfile
+        context: .
+        file: ./Dockerfile
         push: true
         tags: |
-          ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:latest
-          ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-
-    - name: Build and push PostgreSQL image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/postgres
-        file: ./services/postgres/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:latest
-          ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:${{ github.sha }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        platforms: linux/amd64,linux/arm64
-
-    - name: Build and push Ollama image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./services/ollama
-        file: ./services/ollama/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:latest
-          ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:${{ github.sha }}
+          ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:latest
+          ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
         platforms: linux/amd64,linux/arm64
@@ -83,19 +56,16 @@ jobs:
           },
           "images": {
             "litellm-guardrails": {
-              "repository": "${{ steps.login-ecr.outputs.registry }}/litellm-guardrails",
+              "repository": "${{ secrets.ECR_REGISTRY }}/litellm-guardrails",
               "tags": ["latest", "${{ github.sha }}"],
-              "description": "LiteLLM proxy with custom PII detection guardrails"
-            },
-            "postgres-litellm": {
-              "repository": "${{ steps.login-ecr.outputs.registry }}/postgres-litellm",
-              "tags": ["latest", "${{ github.sha }}"],
-              "description": "PostgreSQL with security configurations for LiteLLM"
-            },
-            "ollama-autopull": {
-              "repository": "${{ steps.login-ecr.outputs.registry }}/ollama-autopull",
-              "tags": ["latest", "${{ github.sha }}"],
-              "description": "Ollama with automatic model pulling on startup"
+              "description": "LiteLLM proxy with embedded regex and Presidio PII detection guardrails",
+              "features": [
+                "Regex-based PII detection (email, SSN, phone, credit card)",
+                "Microsoft Presidio ML-based detection (50+ entity types)",
+                "Pre-call and post-call guardrails",
+                "Configurable confidence thresholds",
+                "Production-ready single container deployment"
+              ]
             }
           }
         }
@@ -111,12 +81,16 @@ jobs:
 
     - name: Output build information
       run: |
-        echo "🚀 Successfully built and pushed images to ECR:"
+        echo "🚀 Successfully built and pushed LiteLLM image to ECR:"
         echo ""
-        echo "📦 Images available for infrastructure deployment:"
-        echo "  • LiteLLM: ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:${{ github.sha }}"
-        echo "  • PostgreSQL: ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:${{ github.sha }}"
-        echo "  • Ollama: ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:${{ github.sha }}"
+        echo "📦 Image available for infrastructure deployment:"
+        echo "  • LiteLLM with PII Guardrails: ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
+        echo ""
+        echo "🛡️ Embedded PII Detection Features:"
+        echo "  • Regex-based detection (email, SSN, phone, credit card)"
+        echo "  • Microsoft Presidio ML-based detection (50+ entity types)"
+        echo "  • Pre-call and post-call guardrails"
+        echo "  • Configurable confidence thresholds"
         echo ""
         echo "🏷️ Available tags:"
         echo "  • latest (for development)"
@@ -124,5 +98,5 @@ jobs:
         echo ""
         echo "🚀 Ready for infrastructure deployment!"
         echo "  • Multi-platform support (amd64/arm64)"
-        echo "  • Security hardened containers"
+        echo "  • Production-ready single container"
         echo "  • Health checks included"

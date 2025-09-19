@@ -1,14 +1,12 @@
 services:
-  # Ollama - Local LLM Runtime with Auto Model Pulling
+  # Ollama - Local LLM Runtime for Development Testing
   ollama:
-    build:
-      context: ./services/ollama
-      dockerfile: Dockerfile
-    container_name: litellm-ollama
-    volumes:
-      - ollama_data:/root/.ollama
+    image: ollama/ollama:latest
+    container_name: ollama-dev
     ports:
       - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
     networks:
       - litellm-network
     restart: unless-stopped
@@ -17,18 +15,16 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-      start_period: 120s
+      start_period: 30s
 
-  # PostgreSQL Database - API key management and logging
+  # PostgreSQL Database - Local Development
   postgres:
-    build:
-      context: ./services/postgres
-      dockerfile: Dockerfile
-    container_name: litellm-postgres
+    image: postgres:15-alpine
+    container_name: postgres-dev
     environment:
-      POSTGRES_DB: ${POSTGRES_DB:-litellm_db}
-      POSTGRES_USER: ${POSTGRES_USER:-litellm}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-litellm_secure_password}
+      - POSTGRES_DB=litellm_db
+      - POSTGRES_USER=litellm_user
+      - POSTGRES_PASSWORD=litellm_password
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
@@ -37,68 +33,27 @@ services:
       - litellm-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-litellm}"]
+      test: ["CMD-SHELL", "pg_isready -U litellm_user -d litellm_db"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Microsoft Presidio Analyzer - PII Detection Service
-  presidio-analyzer:
-    image: mcr.microsoft.com/presidio-analyzer:latest
-    container_name: presidio-analyzer
-    ports:
-      - "3000:3000"
-    networks:
-      - litellm-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  # Microsoft Presidio Anonymizer - PII Masking Service  
-  presidio-anonymizer:
-    image: mcr.microsoft.com/presidio-anonymizer:latest
-    container_name: presidio-anonymizer
-    ports:
-      - "3001:3001"
-    networks:
-      - litellm-network
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3001/health"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 30s
-
-  # LiteLLM Proxy
+  # LiteLLM Proxy - Local Development
   litellm:
     build:
-      context: ./services/litellm
+      context: .
       dockerfile: Dockerfile
     container_name: litellm-proxy
     depends_on:
       ollama:
-        condition: service_started
+        condition: service_healthy
       postgres:
         condition: service_healthy
-      presidio-analyzer:
-        condition: service_started
-      presidio-anonymizer:
-        condition: service_started
     ports:
-      - "${PORT:-4000}:4000"
+      - "4000:4000"
     environment:
-      - LITELLM_MASTER_KEY=${LITELLM_MASTER_KEY}
-      - LITELLM_MODE=PRODUCTION
-      # Database configuration
-      - DATABASE_URL=postgresql://${POSTGRES_USER:-litellm}:${POSTGRES_PASSWORD:-litellm_secure_password}@postgres:5432/${POSTGRES_DB:-litellm_db}
-      # Presidio service endpoints
-      - PRESIDIO_ANALYZER_API_BASE=http://presidio-analyzer:3000
-      - PRESIDIO_ANONYMIZER_API_BASE=http://presidio-anonymizer:3001
+      - LITELLM_MASTER_KEY=sk-local-dev-key-12345
+      - DATABASE_URL=postgresql://litellm_user:litellm_password@postgres:5432/litellm_db
     networks:
       - litellm-network
     restart: unless-stopped
@@ -113,5 +68,5 @@ networks:
     driver: bridge
 
 volumes:
-  postgres_data:
   ollama_data:
+  postgres_data:

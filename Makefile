@@ -1,7 +1,7 @@
-# LiteLLM + Presidio PII Guardrail Stack
-# Complete docker-compose deployment with dual guardrail system
+# LiteLLM Local Development
+# Simple single-service deployment with regex-based PII guardrails
 
-.PHONY: help build start stop clean test test-guardrails logs status
+.PHONY: help build start stop clean test test-guardrails logs status pull-model
 .DEFAULT_GOAL := help
 
 # Colors
@@ -12,65 +12,61 @@ NC := \033[0m
 
 ## Show available commands
 help:
-	@echo "$(GREEN)LiteLLM + Presidio PII Guardrail Stack$(NC)"
-	@echo "================================================"
+	@echo "$(GREEN)LiteLLM Local Development$(NC)"
+	@echo "================================="
 	@echo ""
 	@echo "$(BLUE)Essential Commands:$(NC)"
-	@echo "  $(YELLOW)build$(NC)           Build all Docker services"
-	@echo "  $(YELLOW)start$(NC)           Start all services (Presidio + LiteLLM)"
-	@echo "  $(YELLOW)stop$(NC)            Stop all services"
-	@echo "  $(YELLOW)restart$(NC)         Restart all services"
-	@echo "  $(YELLOW)clean$(NC)           Stop and remove all containers/volumes"
+	@echo "  $(YELLOW)build$(NC)           Build LiteLLM Docker service"
+	@echo "  $(YELLOW)start$(NC)           Start LiteLLM service"
+	@echo "  $(YELLOW)stop$(NC)            Stop LiteLLM service"
+	@echo "  $(YELLOW)restart$(NC)         Restart LiteLLM service"
+	@echo "  $(YELLOW)clean$(NC)           Stop and remove container/volumes"
 	@echo "  $(YELLOW)test$(NC)            Test LiteLLM functionality"
-	@echo "  $(YELLOW)test-guardrails$(NC) Test both regex and Presidio guardrails"
-	@echo "  $(YELLOW)logs$(NC)            View all container logs"
-	@echo "  $(YELLOW)status$(NC)          Show all container status"
+	@echo "  $(YELLOW)test-guardrails$(NC) Test regex-based PII guardrails"
+	@echo "  $(YELLOW)pull-model$(NC)      Pull Ollama model (llama3.2:3b)"
+	@echo "  $(YELLOW)logs$(NC)            View container logs"
+	@echo "  $(YELLOW)status$(NC)          Show container status"
 	@echo ""
 	@echo "$(BLUE)Quick Start:$(NC)"
-	@echo "1. Ensure Ollama is running: ollama serve"
-	@echo "2. Build services: make build"
-	@echo "3. Start stack: make start"
-	@echo "4. Test: make test-guardrails"
+	@echo "1. Build service: make build"
+	@echo "2. Start service: make start"
+	@echo "3. Test: make test-guardrails"
 	@echo ""
 	@echo "$(BLUE)Services:$(NC)"
-	@echo "  • LiteLLM Proxy:        http://localhost:4000"
-	@echo "  • Presidio Analyzer:    http://localhost:3000"
-	@echo "  • Presidio Anonymizer:  http://localhost:3001"
+	@echo "  • LiteLLM Proxy: http://localhost:4000"
+	@echo "  • Ollama:        http://localhost:11434"
+	@echo "  • PostgreSQL:    localhost:5432 (litellm_db)"
+	@echo "  • Master Key:    sk-local-dev-key-12345"
 	@echo ""
 
-## Build all Docker services
+## Build LiteLLM Docker service
 build:
-	@echo "$(BLUE)Building all services...$(NC)"
-	@if [ ! -f .env ]; then \
-		echo "Creating .env file with default master key..."; \
-		echo "LITELLM_MASTER_KEY=sk-local-$$(openssl rand -hex 16)" > .env; \
-		echo "PORT=4000" >> .env; \
-	fi
+	@echo "$(BLUE)Building LiteLLM service...$(NC)"
 	docker compose build
-	@echo "$(GREEN)All services built!$(NC)"
+	@echo "$(GREEN)LiteLLM service built!$(NC)"
 
 ## Start all services
 start:
-	@echo "$(BLUE)Starting all services...$(NC)"
-	@if [ ! -f .env ]; then echo "ERROR: Run 'make build' first"; exit 1; fi
+	@echo "$(BLUE)Starting services (PostgreSQL + Ollama + LiteLLM)...$(NC)"
 	docker compose up -d
-	@echo "$(GREEN)All services started!$(NC)"
+	@echo "$(GREEN)Services started!$(NC)"
 	@echo "$(BLUE)LiteLLM UI: http://localhost:4000$(NC)"
-	@echo "$(BLUE)Presidio Analyzer: http://localhost:3000$(NC)"
-	@echo "$(BLUE)Presidio Anonymizer: http://localhost:3001$(NC)"
+	@echo "$(BLUE)Ollama API: http://localhost:11434$(NC)"
+	@echo "$(BLUE)PostgreSQL: localhost:5432 (litellm_db)$(NC)"
+	@echo "$(YELLOW)Note: You may need to pull the Ollama model manually: docker exec ollama-dev ollama pull llama3.2:3b$(NC)"
 
-## Stop all services
+## Stop LiteLLM service
 stop:
-	@echo "$(BLUE)Stopping all services...$(NC)"
-	docker-compose down
-	@echo "$(GREEN)All services stopped$(NC)"
+	@echo "$(BLUE)Stopping LiteLLM service...$(NC)"
+	docker compose down
+	@echo "$(GREEN)LiteLLM service stopped$(NC)"
 
-## Restart all services
+## Restart LiteLLM service
 restart: stop start
 
 ## Clean up everything
 clean:
-	@echo "$(BLUE)Cleaning up all services and volumes...$(NC)"
+	@echo "$(BLUE)Cleaning up service and volumes...$(NC)"
 	docker compose down -v
 	docker system prune -f 2>/dev/null || true
 	@echo "$(GREEN)Cleanup complete$(NC)"
@@ -78,77 +74,69 @@ clean:
 ## Test LiteLLM functionality
 test:
 	@echo "$(BLUE)Testing LiteLLM functionality...$(NC)"
-	@if [ ! -f .env ]; then echo "ERROR: Run 'make start' first"; exit 1; fi
-	@source .env && \
-	echo "1. Health check..." && \
-	curl -s -H "Authorization: Bearer $$LITELLM_MASTER_KEY" http://localhost:4000/health | python3 -c "import sys,json; data=json.load(sys.stdin); print('✅ LiteLLM healthy:' if 'healthy_count' in data else '❌ LiteLLM issue:', data.get('healthy_count', 'unknown'), 'models')" && \
+	@echo "1. Health check..." && \
+	curl -s -H "Authorization: Bearer sk-local-dev-key-12345" http://localhost:4000/health | python3 -c "import sys,json; data=json.load(sys.stdin); print('✅ LiteLLM healthy' if data.get('status') == 'healthy' else '❌ LiteLLM issue:', data)" && \
 	echo "2. Models endpoint..." && \
-	curl -s -H "Authorization: Bearer $$LITELLM_MASTER_KEY" http://localhost:4000/v1/models | python3 -c "import sys,json; data=json.load(sys.stdin); print('✅ Models available:', [m['id'] for m in data.get('data', [])])" && \
-	echo "3. Clean request test..." && \
-	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
-		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "What is 2+2?"}], "max_tokens": 5}' | \
-	python3 -c "import sys,json; print('✅ Chat works' if 'choices' in json.load(sys.stdin) else '❌ Chat failed')"
+	curl -s -H "Authorization: Bearer sk-local-dev-key-12345" http://localhost:4000/v1/models | python3 -c "import sys,json; data=json.load(sys.stdin); print('✅ Models endpoint available:', len(data.get('data', [])))"
 
-## Test both guardrail systems
+## Test regex-based guardrail system
 test-guardrails:
-	@echo "$(BLUE)Testing Dual Guardrail System...$(NC)"
-	@if [ ! -f .env ]; then echo "ERROR: Run 'make start' first"; exit 1; fi
-	@source .env && \
-	echo "" && \
+	@echo "$(BLUE)Testing Regex-based PII Guardrails...$(NC)"
+	@echo "" && \
 	echo "=== BASELINE (No Guardrail) ===" && \
 	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
+		-H "Authorization: Bearer sk-local-dev-key-12345" \
 		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My name is John Smith, email test@example.com, I live in Seattle"}], "max_tokens": 5}' | \
+		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My email is test@example.com"}], "max_tokens": 5}' | \
 	python3 -c "import sys,json; print('✅ ALLOWED (no protection)' if 'choices' in json.load(sys.stdin) else '❌ Unexpected block')" && \
 	echo "" && \
-	echo "=== REGEX GUARDRAIL ===" && \
+	echo "=== REGEX PRE-CALL GUARDRAIL ===" && \
 	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
+		-H "Authorization: Bearer sk-local-dev-key-12345" \
 		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My name is John Smith, email test@example.com, I live in Seattle"}], "guardrails": ["pii-regex"]}' | \
+		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My email is test@example.com"}], "extra_body": {"guardrails": ["pii-regex-precall"]}, "max_tokens": 5}' | \
 	python3 -c "import sys,json; print('✅ BLOCKED (regex detected email)' if 'error' in json.load(sys.stdin) else '❌ Regex failed')" && \
 	echo "" && \
-	echo "=== PRESIDIO GUARDRAIL ===" && \
-	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
-		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My name is John Smith, email test@example.com, I live in Seattle"}], "guardrails": ["pii-presidio"]}' | \
-	python3 -c "import sys,json; print('✅ BLOCKED (presidio detected name+email+location)' if 'error' in json.load(sys.stdin) else '❌ Presidio failed')" && \
+	echo "=== REGEX POST-CALL GUARDRAIL ===" && \
+	echo "Testing post-call detection (blocks PII in model responses)" && \
 	echo "" && \
-	echo "=== PRESIDIO ADVANTAGE TEST ===" && \
-	echo "Testing person names (regex can't detect):" && \
+	echo "=== EMAIL DETECTION ===" && \
 	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
+		-H "Authorization: Bearer sk-local-dev-key-12345" \
 		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My name is Sarah Johnson"}], "guardrails": ["pii-regex"]}' | \
-	python3 -c "import sys,json; print('Regex: ALLOWED (missed name)' if 'choices' in json.load(sys.stdin) else 'Regex: BLOCKED')" && \
+		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My contact info includes john.doe@company.com"}], "extra_body": {"guardrails": ["pii-regex-precall"]}, "max_tokens": 5}' | \
+	python3 -c "import sys,json; print('✅ BLOCKED (email detected)' if 'error' in json.load(sys.stdin) else '❌ Failed')" && \
+	echo "" && \
+	echo "=== PHONE DETECTION ===" && \
 	curl -s -X POST http://localhost:4000/v1/chat/completions \
-		-H "Authorization: Bearer $$LITELLM_MASTER_KEY" \
+		-H "Authorization: Bearer sk-local-dev-key-12345" \
 		-H "Content-Type: application/json" \
-		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My name is Sarah Johnson"}], "guardrails": ["pii-presidio"]}' | \
-	python3 -c "import sys,json; print('Presidio: BLOCKED (detected name)' if 'error' in json.load(sys.stdin) else 'Presidio: ALLOWED')"
+		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "Call me at (555) 123-4567"}], "extra_body": {"guardrails": ["pii-regex-precall"]}, "max_tokens": 5}' | \
+	python3 -c "import sys,json; print('✅ BLOCKED (phone detected)' if 'error' in json.load(sys.stdin) else '❌ Failed')" && \
+	echo "" && \
+	echo "=== SSN DETECTION ===" && \
+	curl -s -X POST http://localhost:4000/v1/chat/completions \
+		-H "Authorization: Bearer sk-local-dev-key-12345" \
+		-H "Content-Type: application/json" \
+		-d '{"model": "llama3.2-3b", "messages": [{"role": "user", "content": "My SSN is 123-45-6789"}], "extra_body": {"guardrails": ["pii-regex-precall"]}, "max_tokens": 5}' | \
+	python3 -c "import sys,json; print('✅ BLOCKED (SSN detected)' if 'error' in json.load(sys.stdin) else '❌ Failed')"
 
-## View all container logs
+## View container logs
 logs:
 	@echo "$(BLUE)Container logs:$(NC)"
 	docker compose logs -f
 
-## Show all container status
+## Pull Ollama model
+pull-model:
+	@echo "$(BLUE)Pulling Ollama model (llama3.2:3b)...$(NC)"
+	docker exec ollama-dev ollama pull llama3.2:3b
+	@echo "$(GREEN)Model pulled successfully!$(NC)"
+
+## Show container status
 status:
 	@echo "$(BLUE)Service Status:$(NC)"
 	docker compose ps
 	@echo ""
 	@echo "$(BLUE)Service Health:$(NC)"
-	@curl -s http://localhost:4000/health 2>/dev/null | python3 -c "import sys,json; data=json.load(sys.stdin); print('LiteLLM:', data.get('healthy_count', 0), 'models healthy')" || echo "LiteLLM: Not responding"
-	@curl -s http://localhost:3000/health 2>/dev/null | python3 -c "import sys,json; print('Presidio Analyzer:', json.load(sys.stdin).get('status', 'unknown'))" || echo "Presidio Analyzer: Not responding"  
-	@curl -s http://localhost:3001/health 2>/dev/null | python3 -c "import sys,json; print('Presidio Anonymizer:', json.load(sys.stdin).get('status', 'unknown'))" || echo "Presidio Anonymizer: Not responding"
-
-## Stop existing standalone containers and clean up
-cleanup-standalone:
-	@echo "$(BLUE)Cleaning up standalone containers...$(NC)"
-	@docker stop litellm-proxy presidio-analyzer presidio-anonymizer 2>/dev/null || true
-	@docker rm litellm-proxy presidio-analyzer presidio-anonymizer 2>/dev/null || true
-	@echo "$(GREEN)Standalone containers cleaned up$(NC)"
+	@curl -s http://localhost:4000/health 2>/dev/null | python3 -c "import sys,json; data=json.load(sys.stdin); print('LiteLLM:', data.get('status', 'unknown'))" || echo "LiteLLM: Not responding"
+	@curl -s http://localhost:11434 2>/dev/null | python3 -c "import sys; print('Ollama: Running')" || echo "Ollama: Not responding"

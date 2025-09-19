@@ -1,0 +1,51 @@
+# Model List
+model_list:
+  - model_name: llama3.2-3b
+    litellm_params:
+      model: ollama/llama3.2:3b
+      api_base: http://ollama:11434
+
+# General Settings
+general_settings:
+  # Master key for authentication
+  master_key: os.environ/LITELLM_MASTER_KEY
+  
+  # Database connection
+  database_url: os.environ/DATABASE_URL
+  
+  # Health check
+  health_check: true
+  
+  # Logging
+  set_verbose: false
+  json_logs: true
+
+# Custom PII Detection Guardrails
+guardrails:
+  # Fast regex-based PII detection
+  - guardrail_name: "pii-regex-precall"
+    litellm_params:
+      guardrail: pii_regex_precall.PIIRegexPreCallGuardrail
+      mode: "pre_call"
+      
+  - guardrail_name: "pii-regex-postcall"
+    litellm_params:
+      guardrail: pii_regex_postcall.PIIRegexPostCallGuardrail
+      mode: "post_call"
+  
+  # Comprehensive ML-based PII detection using Microsoft Presidio
+  - guardrail_name: "pii-presidio-precall"
+    litellm_params:
+      guardrail: pii_presidio_precall.PIIPresidioPreCallGuardrail
+      mode: "pre_call"
+      language: "en"
+      threshold: 0.7
+      block_on_detection: true
+      
+  - guardrail_name: "pii-presidio-postcall"
+    litellm_params:
+      guardrail: pii_presidio_postcall.PIIPresidioPostCallGuardrail
+      mode: "post_call"
+      language: "en"
+      threshold: 0.7
+      block_on_detection: true

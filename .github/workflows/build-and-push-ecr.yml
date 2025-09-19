@@ -81,25 +81,25 @@ jobs:
 
     - name: Output build information
       run: |
-        echo "🚀 Successfully built and pushed LiteLLM image to ECR:"
+        echo "Successfully built and pushed LiteLLM image to ECR:"
         echo ""
-        echo "📦 Image available for infrastructure deployment:"
-        echo "  • LiteLLM with PII Guardrails: ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
+        echo "Image available for infrastructure deployment:"
+        echo "  - LiteLLM with PII Guardrails: ${{ secrets.ECR_REGISTRY }}/litellm-guardrails:${{ github.sha }}"
         echo ""
-        echo "🛡️ Embedded PII Detection Features:"
-        echo "  • Regex-based detection (email, SSN, phone, credit card)"
-        echo "  • Microsoft Presidio ML-based detection (50+ entity types)"
-        echo "  • Pre-call and post-call guardrails"
-        echo "  • Configurable confidence thresholds"
+        echo "Embedded PII Detection Features:"
+        echo "  - Regex-based detection (email, SSN, phone, credit card)"
+        echo "  - Microsoft Presidio ML-based detection (50+ entity types)"
+        echo "  - Pre-call and post-call guardrails"
+        echo "  - Configurable confidence thresholds"
         echo ""
-        echo "🏷️ Available tags:"
-        echo "  • latest (for development)"
-        echo "  • ${{ github.sha }} (for production infrastructure)"
+        echo "Available tags:"
+        echo "  - latest (for development)"
+        echo "  - ${{ github.sha }} (for production infrastructure)"
         echo ""
-        echo "🚀 Ready for infrastructure deployment!"
-        echo "  • Multi-platform support (amd64/arm64)"
-        echo "  • Production-ready single container"
-        echo "  • Health checks included"
+        echo "Ready for infrastructure deployment!"
+        echo "  - Multi-platform support (amd64/arm64)"
+        echo "  - Production-ready single container"
+        echo "  - Health checks included"
 
     - name: Trigger Infrastructure Deployment
       if: success()
@@ -127,6 +127,6 @@ jobs:
             }
           }"
         
-        echo "✅ Infrastructure deployment triggered successfully!"
-        echo "📋 Monitor progress at: https://github.com/mrcloudchase/litellm-infra/actions"
-        echo "🔗 Direct link: https://github.com/mrcloudchase/litellm-infra/actions/workflows/deploy-dev.yml"
+        echo "Infrastructure deployment triggered successfully!"
+        echo "Monitor progress at: https://github.com/mrcloudchase/litellm-infra/actions"
+        echo "Direct link: https://github.com/mrcloudchase/litellm-infra/actions/workflows/deploy-dev.yml"

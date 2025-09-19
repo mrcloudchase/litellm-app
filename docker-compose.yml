@@ -54,6 +54,9 @@ services:
     environment:
       - LITELLM_MASTER_KEY=sk-local-dev-key-12345
       - DATABASE_URL=postgresql://litellm_user:litellm_password@postgres:5432/litellm_db
+    volumes:
+      - ./litellm-config-local.yaml:/app/litellm-config-local.yaml
+    command: ["--port", "4000", "--config", "/app/litellm-config-local.yaml"]
     networks:
       - litellm-network
     restart: unless-stopped

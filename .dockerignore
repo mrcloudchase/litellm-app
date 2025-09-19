@@ -17,6 +17,7 @@ IMPLEMENTATION_NOTES.md
 docker-compose.yml
 Makefile
 .dockerignore
+litellm-config-local.yaml
 
 # Test files and collections
 tests/

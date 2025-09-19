@@ -1,0 +1,39 @@
+# Development files
+.git
+.gitignore
+README.md
+*.md
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Security sensitive files
+.env
+.env.*
+secrets/
+*.key
+*.pem
+*.crt
+
+# Model files (will be downloaded at runtime)
+*.bin
+*.gguf
+models/
+
+# Build artifacts
+dist/
+build/
+*.tar.gz

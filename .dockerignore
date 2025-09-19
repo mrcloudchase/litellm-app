@@ -1,0 +1,55 @@
+# Development and documentation files
+.git
+.gitignore
+*.md
+docs/
+plan.md
+assessment-plan.md
+DEMO_SCRIPT.md
+DOCKER_STRATEGY.md
+IMPLEMENTATION_NOTES.md
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Security sensitive files
+.env
+.env.*
+secrets/
+*.key
+*.pem
+*.crt
+
+# Test files
+tests/
+scripts/test_*
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.coverage
+
+# Docker volumes and data
+postgres_data/
+ollama_data/

@@ -1,0 +1,128 @@
+name: Build and Push to ECR
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REGISTRY_ALIAS: chasedecr
+
+jobs:
+  build-and-push:
+    name: Build and Push Container Images
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build and push LiteLLM image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/litellm
+        file: ./services/litellm/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:latest
+          ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Build and push PostgreSQL image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/postgres
+        file: ./services/postgres/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:latest
+          ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Build and push Ollama image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./services/ollama
+        file: ./services/ollama/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:latest
+          ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:${{ github.sha }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: Create image manifest
+      run: |
+        cat > image-manifest.json << EOF
+        {
+          "build_info": {
+            "commit": "${{ github.sha }}",
+            "build_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "repository": "${{ github.repository }}",
+            "ref": "${{ github.ref }}"
+          },
+          "images": {
+            "litellm-guardrails": {
+              "repository": "${{ steps.login-ecr.outputs.registry }}/litellm-guardrails",
+              "tags": ["latest", "${{ github.sha }}"],
+              "description": "LiteLLM proxy with custom PII detection guardrails"
+            },
+            "postgres-litellm": {
+              "repository": "${{ steps.login-ecr.outputs.registry }}/postgres-litellm",
+              "tags": ["latest", "${{ github.sha }}"],
+              "description": "PostgreSQL with security configurations for LiteLLM"
+            },
+            "ollama-autopull": {
+              "repository": "${{ steps.login-ecr.outputs.registry }}/ollama-autopull",
+              "tags": ["latest", "${{ github.sha }}"],
+              "description": "Ollama with automatic model pulling on startup"
+            }
+          }
+        }
+        EOF
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-manifest-${{ github.sha }}
+        path: |
+          image-manifest.json
+        retention-days: 90
+
+    - name: Output build information
+      run: |
+        echo "🚀 Successfully built and pushed images to ECR:"
+        echo ""
+        echo "📦 Images available for infrastructure deployment:"
+        echo "  • LiteLLM: ${{ steps.login-ecr.outputs.registry }}/litellm-guardrails:${{ github.sha }}"
+        echo "  • PostgreSQL: ${{ steps.login-ecr.outputs.registry }}/postgres-litellm:${{ github.sha }}"
+        echo "  • Ollama: ${{ steps.login-ecr.outputs.registry }}/ollama-autopull:${{ github.sha }}"
+        echo ""
+        echo "🏷️ Available tags:"
+        echo "  • latest (for development)"
+        echo "  • ${{ github.sha }} (for production infrastructure)"
+        echo ""
+        echo "🚀 Ready for infrastructure deployment!"
+        echo "  • Multi-platform support (amd64/arm64)"
+        echo "  • Security hardened containers"
+        echo "  • Health checks included"

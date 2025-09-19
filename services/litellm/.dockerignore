@@ -1,0 +1,44 @@
+# Development files
+.git
+.gitignore
+README.md
+*.md
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.log
+*.bak
+
+# Security sensitive files
+.env
+.env.*
+secrets/
+*.key
+*.pem
+*.crt
+
+# Build artifacts
+dist/
+build/
+*.tar.gz

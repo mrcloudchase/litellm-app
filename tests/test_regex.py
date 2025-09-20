@@ -8,7 +8,7 @@ from openai import OpenAI
 import os
 
 # Configuration
-api_key = os.getenv("LITELLM_MASTER_KEY", "your-master-key")
+api_key = os.getenv("LITELLM_MASTER_KEY", "sk-local-dev-key-12345")
 client = OpenAI(api_key=api_key, base_url="http://localhost:4000/v1")
 
 def test_regex_email_detection():

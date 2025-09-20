@@ -9,7 +9,7 @@
 ### ================================
 
 ### Health Check
-GET {{baseUrl}}/health
+GET {{baseUrl}}/health/readiness
 
 ### Models List
 GET {{baseUrl}}/v1/models
